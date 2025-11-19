@@ -27,9 +27,23 @@ async function fetchData() {
       // Create the list for the entries
       const entriesList = document.createElement('ul');
       entriesList.className = 'entries-list';
-      entriesByDate[date].forEach(entryText => {
+      entriesByDate[date].forEach(entry => {
         const listItem = document.createElement('li');
-        listItem.textContent = entryText;
+        // Add a class based on the discipline for styling
+        listItem.classList.add(`discipline-${entry.discipline.toLowerCase()}`);
+
+        // Create a checkbox
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = entry.done;
+        checkbox.disabled = true; // For display only
+
+        // Create a span for the description text
+        const description = document.createElement('span');
+        description.textContent = entry.description;
+
+        listItem.appendChild(checkbox);
+        listItem.appendChild(description);
         entriesList.appendChild(listItem);
       });
       dateCard.appendChild(entriesList);

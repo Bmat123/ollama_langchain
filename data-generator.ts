@@ -8,7 +8,20 @@ export  abstract class TrainingActivity {
   date: Date;
   description: string;
   discipline: string;
-  done: boolean = false;
+  private done: boolean = false;
+
+  isDone(): boolean {
+    return this.done;
+  }
+
+  markAsDone() {
+    this.done = true;
+  }
+  markAsUndone() {
+    this.done = false;
+  }
+
+
 
   constructor(date: Date, description: string, discipline: string) {
     this.date = date;
@@ -60,14 +73,19 @@ export class TrainingPlan {
     this.activities.sort((a, b) => a.date.getTime() - b.date.getTime());
   }
 
-  getEntriesByDate(): { [date: string]: string[] } {
-    const entries: { [date: string]: string[] } = {};
+  getEntriesByDate(): { [date: string]: { description: string; discipline: string; done: boolean }[] } {
+    const entries: { [date: string]: { description: string; discipline: string; done: boolean }[] } = {};
     for (const activity of this.activities) {
       const dateKey = activity.date.toISOString().split("T")[0]; // Format date as 'YYYY-MM-DD'
       if (!entries[dateKey]) {
         entries[dateKey] = [];
       }
-      entries[dateKey].push(activity.description);
+      // Push a detailed object instead of just the description string
+      entries[dateKey].push({
+        description: activity.description,
+        discipline: activity.discipline,
+        done: activity.isDone(),
+      });
     }
     return entries;
   }
@@ -77,7 +95,7 @@ export interface OllamaData {
   message: string; // A general message
   timestamp: Date;
   model: string;
-  entriesByDate: { [date: string]: string[] }; // New property: date -> entries
+  entriesByDate: { [date: string]: { description: string; discipline: string; done: boolean }[] };
 }
 
 export function generateJsonData(): OllamaData {
@@ -86,7 +104,10 @@ export function generateJsonData(): OllamaData {
   const plan = new TrainingPlan();
 
   // Add some sample activities to the plan
-  plan.addActivity(new Running(new Date("2025-11-19"), "Morning Run", 5)); // Use the new Running class
+  const runningActivity = new Running(new Date("2025-11-19"), "Morning Run", 5);
+  runningActivity.markAsDone(); // Mark this one as done for demonstration
+  plan.addActivity(runningActivity);
+
   plan.addActivity(new Cycling(new Date("2025-11-22"), "Morning Cycle", 5)); // Use the new Running class
   plan.addActivity(new Swimming(new Date("2025-11-31"), "Morning Swim", 5)); // Use the new Running class
   return {

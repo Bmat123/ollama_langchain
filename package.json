@@ -4,15 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "type": "git",
-    "url": "git+https://github.com/Bmat123/ollama_langchain.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Bmat123/ollama_langchain/issues"
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node server.ts",
+    "test": "jest"
   },
   "homepage": "https://github.com/Bmat123/ollama_langchain#readme",
   "dependencies": {
@@ -20,18 +15,13 @@
     "express": "^5.1.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
+    "@types/jest": "^29.5.12",
     "@types/node": "^24.10.1",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
-  },
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "ts-node server.ts",
-    "test": "jest"
   }
 }
