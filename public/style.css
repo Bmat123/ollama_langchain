@@ -43,9 +43,27 @@ h1 {
 }
 
 .entries-list li {
+  display: flex;
+  align-items: center;
   background-color: #f9f9f9;
-  border-left: 3px solid #007bff;
+  border-left-width: 3px;
+  border-left-style: solid;
   padding: 10px;
   margin-bottom: 8px;
   border-radius: 4px;
+}
+
+.entries-list li input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+/* Discipline-specific colors */
+.discipline-running {
+  border-left-color: #28a745; /* Green */
+}
+.discipline-cycling {
+  border-left-color: #fd7e14; /* Orange */
+}
+.discipline-swimming {
+  border-left-color: #17a2b8; /* Teal */
 }

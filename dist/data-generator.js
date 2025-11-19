@@ -9,6 +9,15 @@ exports.generateJsonData = generateJsonData;
  * Represents a single training activity with a date, description, and discipline.
  */
 class TrainingActivity {
+    isDone() {
+        return this.done;
+    }
+    markAsDone() {
+        this.done = true;
+    }
+    markAsUndone() {
+        this.done = false;
+    }
     constructor(date, description, discipline) {
         this.done = false;
         this.date = date;
@@ -69,7 +78,12 @@ class TrainingPlan {
             if (!entries[dateKey]) {
                 entries[dateKey] = [];
             }
-            entries[dateKey].push(activity.description);
+            // Push a detailed object instead of just the description string
+            entries[dateKey].push({
+                description: activity.description,
+                discipline: activity.discipline,
+                done: activity.isDone(),
+            });
         }
         return entries;
     }
@@ -80,7 +94,9 @@ function generateJsonData() {
     // In a real application, this is where you'd fetch data from Ollama.
     const plan = new TrainingPlan();
     // Add some sample activities to the plan
-    plan.addActivity(new Running(new Date("2025-11-19"), "Morning Run", 5)); // Use the new Running class
+    const runningActivity = new Running(new Date("2025-11-19"), "Morning Run", 5);
+    runningActivity.markAsDone(); // Mark this one as done for demonstration
+    plan.addActivity(runningActivity);
     plan.addActivity(new Cycling(new Date("2025-11-22"), "Morning Cycle", 5)); // Use the new Running class
     plan.addActivity(new Swimming(new Date("2025-11-31"), "Morning Swim", 5)); // Use the new Running class
     return {

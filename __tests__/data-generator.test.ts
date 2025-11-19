@@ -1,4 +1,4 @@
-import { TrainingActivity, Running, Cycling, Swimming } from './data-generator';
+import { TrainingActivity, Running, Cycling, Swimming } from '../data-generator';
 
 // Since TrainingActivity is abstract, we create a simple concrete class for testing its base functionality.
 class TestActivity extends TrainingActivity {}
@@ -13,7 +13,22 @@ describe('TrainingActivity Classes', () => {
       expect(activity.date).toBe(date);
       expect(activity.description).toBe('Base Test');
       expect(activity.discipline).toBe('Test');
-      expect(activity.done).toBe(false); // Check default value
+      expect(activity.isDone()).toBe(false); // Check default value
+    });
+
+    it('should allow marking an activity as done', () => {
+      const activity = new TestActivity(new Date(), 'Test Done', 'Test');
+      expect(activity.isDone()).toBe(false); // Initially not done
+      activity.markAsDone();
+      expect(activity.isDone()).toBe(true); // Should be done
+    });
+
+    it('should allow marking an activity as undone after being marked as done', () => {
+      const activity = new TestActivity(new Date(), 'Test Undone', 'Test');
+      activity.markAsDone();
+      expect(activity.isDone()).toBe(true); // Check it is done first
+      activity.markAsUndone();
+      expect(activity.isDone()).toBe(false); // Should be not done
     });
   });
 
