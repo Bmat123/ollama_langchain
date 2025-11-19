@@ -10,10 +10,8 @@ const data_generator_1 = require("./data-generator");
 const app = (0, express_1.default)();
 const port = 3000;
 app.use((0, cors_1.default)()); // Enable CORS for local development
-// Serve static files from the 'public' directory
-// This path works for both 'npm run dev' and 'npm start' from the dist folder
-app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
-app.get('/data', (req, res) => {
+app.use(express_1.default.static(path_1.default.join(__dirname, "../public")));
+app.get("/data", (req, res) => {
     const data = (0, data_generator_1.generateJsonData)();
     res.json(data);
 });
