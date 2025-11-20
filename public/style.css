@@ -67,3 +67,9 @@ h1 {
 .discipline-swimming {
   border-left-color: #17a2b8; /* Teal */
 }
+
+.planned-duration {
+  margin-left: auto; /* Pushes the duration to the right */
+  font-size: 0.9em;
+  color: #666;
+}

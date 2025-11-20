@@ -42,8 +42,14 @@ async function fetchData() {
         const description = document.createElement('span');
         description.textContent = entry.description;
 
+        // Create a span for the planned duration
+        const durationSpan = document.createElement('span');
+        durationSpan.className = 'planned-duration';
+        durationSpan.textContent = ` (${entry.plannedDuration} min)`; // Display duration in minutes
+
         listItem.appendChild(checkbox);
         listItem.appendChild(description);
+        listItem.appendChild(durationSpan);
         entriesList.appendChild(listItem);
       });
       dateCard.appendChild(entriesList);
