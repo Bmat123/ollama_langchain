@@ -1,11 +1,15 @@
-import { TrainingPlan } from '../src/data-generator';
-import { Running, Cycling } from '../src/training-activity';
+import { TrainingPlan } from "../src/data-generator";
+import { Running, Cycling } from "../src/training-activity";
+import * as fs from "fs";
+import * as path from "path";
 
 describe('TrainingPlan', () => {
   let plan: TrainingPlan;
 
   beforeEach(() => {
     plan = new TrainingPlan();
+    // clearing mocks if needed 
+    jest.restoreAllMocks()
   });
 
   it('should add an activity to the plan', () => {
@@ -37,5 +41,40 @@ describe('TrainingPlan', () => {
     expect(entries['2025-11-21']).toHaveLength(1);
     expect(entries['2025-11-20'][1].done).toBe(true);
   });
+
+  it('should save the plan to a JSON file', () => {
+    // Arrange: Create a plan with one activity
+    const writeFileSyncSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+
+    const activity = new Running(new Date("2025-11-20T10:00:00.000Z"), "Morning Run", 30, 5);
+    activity.markAsDone();
+    plan.addActivity(activity);
+
+    const filename = "my-test-plan";
+    const expectedPath = path.join("data", `${filename}.json`);
+    const expectedJson = JSON.stringify(
+      [
+        {
+          date: "2025-11-20T10:00:00.000Z",
+          description: "Morning Run",
+          discipline: "Running",
+          plannedDuration: 30,
+          done: true,
+          distance: 5,
+        },
+      ],
+      null,
+      2
+    );
+
+    // Act: Call the save method
+    plan.save(filename);
+
+    // Assert: Verify that fs.writeFileSync was called with the correct path and data
+    expect(writeFileSyncSpy).toHaveBeenCalledTimes(1);
+    expect(writeFileSyncSpy).toHaveBeenCalledWith(expectedPath, expectedJson);
+  });
+
+
 });
 

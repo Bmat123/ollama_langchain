@@ -5,7 +5,13 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Ollama Results</h1>
+  <h1>Training Plan</h1>
+  <div class="plan-controls">
+    <input type="text" id="plan-filename" placeholder="Enter plan name...">
+    <button id="save-plan-btn">Save</button>
+    <button id="load-plan-btn">Load</button>
+  </div>
+  <div id="status-message"></div>
   <div id="calendar-container"></div>
   <script src="script.js"></script>
 </body>
