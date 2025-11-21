@@ -43,8 +43,6 @@ describe('TrainingPlan', () => {
   });
 
   it('should save the plan to a JSON file', () => {
-    // Arrange: Create a plan with one activity
-    const writeFileSyncSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
 
     const activity = new Running(new Date("2025-11-20T10:00:00.000Z"), "Morning Run", 30, 5);
     activity.markAsDone();
@@ -69,10 +67,16 @@ describe('TrainingPlan', () => {
 
     // Act: Call the save method
     plan.save(filename);
+    let test = new TrainingPlan();
+    test = TrainingPlan.load(filename);
+    expect(test.activities.length).toBe(1);
+    expect(test.activities[0].description).toBe("Morning Run");
+    expect(test.activities[0].discipline).toBe("Running");
+    expect(test.activities[0].plannedDuration).toBe(30);
+    expect(test.activities[0].isDone()).toBe(true);
+    
 
-    // Assert: Verify that fs.writeFileSync was called with the correct path and data
-    expect(writeFileSyncSpy).toHaveBeenCalledTimes(1);
-    expect(writeFileSyncSpy).toHaveBeenCalledWith(expectedPath, expectedJson);
+   
   });
 
 
