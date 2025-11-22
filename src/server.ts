@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import path from "path"; // Import the 'path' module
-import { generateJsonData, TrainingPlan } from "./data-generator"; // This path is correct as both files are in src
+import { generateJsonData } from "./data-generator";
+import { TrainingPlan } from "./training-plan";
 
 const app = express();
 app.use(express.json()); // Enable JSON body parsing

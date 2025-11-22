@@ -1,4 +1,4 @@
-import { TrainingPlan } from "../src/data-generator";
+import { TrainingPlan } from "../src/training-plan";
 import { Running, Cycling } from "../src/training-activity";
 import * as fs from "fs";
 import * as path from "path";

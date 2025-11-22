@@ -1,14 +1,32 @@
 body {
   font-family: sans-serif;
-  margin: 40px;
+  padding: 20px;
   background-color: #f0f0f0;
   color: #333;
 }
 
-h1 {
+#calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+#calendar-header h1 {
+  margin: 0;
+  font-size: 1.8em;
+}
+
+#calendar-header button {
+  background: none;
+  border: none;
+  font-size: 2em;
+  cursor: pointer;
+}
+
+h1 { /* This is now for the month display */
   text-align: center;
   color: #444;
-  margin-bottom: 40px;
 }
 
 .plan-controls {
@@ -33,61 +51,74 @@ h1 {
   cursor: pointer;
 }
 
-#calendar-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
+#weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 10px;
 }
 
-.date-card {
-  background-color: white;
-  border: 1px solid #ccc;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  width: 300px;
-}
-
-.date-title {
-  font-size: 1.2em;
+#weekdays div {
+  text-align: center;
   font-weight: bold;
-  color: #0056b3;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 10px;
-  margin-top: 0;
-  margin-bottom: 15px;
+  color: #555;
 }
 
-.entries-list {
-  list-style-type: none;
-  padding-left: 0;
+#calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
 }
 
-.entries-list li {
-  display: flex;
-  align-items: center;
-  background-color: #f9f9f9;
-  border-left-width: 3px;
-  border-left-style: solid;
-  padding: 10px;
-  margin-bottom: 8px;
+.day-cell {
+  min-height: 120px;
+  padding: 8px;
+  background-color: #fff;
+  border: 1px solid #ddd;
   border-radius: 4px;
+  position: relative;
+  font-size: 0.9em;
 }
 
-.entries-list li input[type="checkbox"] {
-  margin-right: 10px;
+.day-cell.padding {
+  background-color: #f7f7f7;
+}
+
+.day-cell .day-number {
+  font-weight: bold;
+}
+
+.day-cell.today .day-number {
+  color: #fff;
+  background-color: #007bff;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.activity {
+  font-size: 0.8em;
+  padding: 3px 5px;
+  border-radius: 4px;
+  margin-top: 5px;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }
 
 /* Discipline-specific colors */
-.discipline-running {
-  border-left-color: #28a745; /* Green */
+.activity.discipline-running {
+  background-color: #28a745; /* Green */
 }
-.discipline-cycling {
-  border-left-color: #fd7e14; /* Orange */
+.activity.discipline-cycling {
+  background-color: #fd7e14; /* Orange */
 }
-.discipline-swimming {
-  border-left-color: #17a2b8; /* Teal */
+.activity.discipline-swimming {
+  background-color: #17a2b8; /* Teal */
 }
 
 .planned-duration {
@@ -101,4 +132,42 @@ h1 {
   margin-bottom: 20px;
   min-height: 1.2em;
   font-weight: bold;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 20px 40px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #333;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 2em;
+  color: #aaa;
+  cursor: pointer;
 }

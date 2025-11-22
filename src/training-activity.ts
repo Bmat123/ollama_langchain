@@ -1,3 +1,5 @@
+import { Interval } from './interval';
+
 /**
  * @fileoverview This file contains the core data models for training activities.
  */
@@ -10,6 +12,7 @@ export abstract class TrainingActivity {
   description: string;
   discipline: string;
   plannedDuration: number; // in minutes
+  intervals: Interval[]=[];
   private done: boolean = false;
 
   isDone(): boolean {

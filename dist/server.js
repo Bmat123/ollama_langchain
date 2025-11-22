@@ -6,7 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const path_1 = __importDefault(require("path")); // Import the 'path' module
-const data_generator_1 = require("./data-generator"); // This path is correct as both files are in src
+const data_generator_1 = require("./data-generator");
+const training_plan_1 = require("./training-plan");
 const app = (0, express_1.default)();
 app.use(express_1.default.json()); // Enable JSON body parsing
 const port = 3000;
@@ -21,7 +22,7 @@ app.post("/save/:filename", (req, res) => {
         const filename = req.params.filename;
         // For this example, we save the currently generated default plan
         // In a real app, you'd get the plan data from `req.body`
-        const planToSave = data_generator_1.TrainingPlan.load('default'); // Or create from req.body
+        const planToSave = training_plan_1.TrainingPlan.load('default'); // Or create from req.body
         planToSave.save(filename);
         res.send("Training plan saved successfully!");
     }
@@ -33,7 +34,7 @@ app.post("/save/:filename", (req, res) => {
 app.get("/load/:filename", (req, res) => {
     // Use the static load method on the class
     const filename = req.params.filename;
-    const loadedPlan = data_generator_1.TrainingPlan.load(filename);
+    const loadedPlan = training_plan_1.TrainingPlan.load(filename);
     if (loadedPlan) {
         res.json({ message: "Training plan loaded successfully!", entriesByDate: loadedPlan.getEntriesByDate() });
     }
