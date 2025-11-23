@@ -1,1 +1,4 @@
 node_modules
+dist 
+dist/data-generator.js
+data/*
