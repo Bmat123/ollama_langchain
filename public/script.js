@@ -89,6 +89,31 @@ function openActivityModal(activity) {
     distanceEl.parentElement.style.display = 'none';
   }
 
+  const intervalsContainer = document.getElementById('modal-intervals-container');
+  intervalsContainer.innerHTML = ''; // Clear previous intervals
+
+  if (activity.intervals && activity.intervals.length > 0) {
+    const intervalsTitle = document.createElement('h3');
+    intervalsTitle.innerText = 'Intervals';
+    intervalsContainer.appendChild(intervalsTitle);
+
+    const intervalsList = document.createElement('ul');
+    intervalsList.className = 'intervals-list';
+
+    activity.intervals.forEach(interval => {
+      const listItem = document.createElement('li');
+      const status = interval.done ? '✅' : '🔲';
+      listItem.innerHTML = `
+        ${status} ${interval.repetitions}x ${interval.description} 
+        (${interval.duration} min) @ ${interval.intensity} intensity
+      `;
+      intervalsList.appendChild(listItem);
+    });
+
+    intervalsContainer.appendChild(intervalsList);
+  }
+
+
   modal.style.display = 'flex';
 }
 

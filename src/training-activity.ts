@@ -1,4 +1,4 @@
-import { Interval } from './interval';
+import { Interval } from "./interval";
 
 /**
  * @fileoverview This file contains the core data models for training activities.
@@ -12,7 +12,7 @@ export abstract class TrainingActivity {
   description: string;
   discipline: string;
   plannedDuration: number; // in minutes
-  intervals: Interval[]=[];
+  intervals: Interval[] = [];
   private done: boolean = false;
 
   isDone(): boolean {
@@ -25,8 +25,17 @@ export abstract class TrainingActivity {
   markAsUndone() {
     this.done = false;
   }
+  addInterval(interval: Interval) {
+    this.intervals.push(interval);
+    this.plannedDuration += interval.duration;
+  }
 
-  constructor(date: Date, description: string, discipline: string, plannedDuration: number) {
+  constructor(
+    date: Date,
+    description: string,
+    discipline: string,
+    plannedDuration: number
+  ) {
     this.date = date;
     this.description = description;
     this.discipline = discipline;
@@ -39,19 +48,34 @@ export abstract class TrainingActivity {
  * It automatically sets the discipline to "Running" and adds a distance property.
  */
 export class Running extends TrainingActivity {
-  constructor(public date: Date, public description: string, public plannedDuration: number, public distance: number) {
+  constructor(
+    public date: Date,
+    public description: string,
+    public plannedDuration: number,
+    public distance: number
+  ) {
     super(date, description, "Running", plannedDuration);
   }
 }
 
 export class Cycling extends TrainingActivity {
-  constructor(public date: Date, public description: string, public plannedDuration: number, public distance: number) {
+  constructor(
+    public date: Date,
+    public description: string,
+    public plannedDuration: number,
+    public distance: number
+  ) {
     super(date, description, "Cycling", plannedDuration);
   }
 }
 
 export class Swimming extends TrainingActivity {
-  constructor(public date: Date, public description: string, public plannedDuration: number, public distance: number) {
+  constructor(
+    public date: Date,
+    public description: string,
+    public plannedDuration: number,
+    public distance: number
+  ) {
     super(date, description, "Swimming", plannedDuration);
   }
 }

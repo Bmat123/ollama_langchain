@@ -171,3 +171,15 @@ h1 { /* This is now for the month display */
   color: #aaa;
   cursor: pointer;
 }
+
+.intervals-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.intervals-list li {
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 5px;
+}

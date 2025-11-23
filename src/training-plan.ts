@@ -4,6 +4,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs';
+import { Interval } from './interval';
 import { TrainingActivity, Running, Cycling, Swimming } from './training-activity';
 
 export class TrainingPlan {
@@ -31,6 +32,13 @@ export class TrainingPlan {
         discipline: activity.discipline,
         plannedDuration: activity.plannedDuration,
         done: activity.isDone(),
+        intervals: activity.intervals.map(interval => ({
+          description: interval.description,
+          duration: interval.duration,
+          intensity: interval.intensity,
+          repetitions: interval.repetitions,
+          done: interval.isDone(),
+        })),
       };
       if (activity instanceof Running || activity instanceof Cycling || activity instanceof Swimming) {
         plainActivity.distance = activity.distance;
@@ -77,6 +85,13 @@ export class TrainingPlan {
           if (activity.done) {
             newActivity.markAsDone();
           }
+          if (activity.intervals && Array.isArray(activity.intervals)) {
+            activity.intervals.forEach((intervalData: any) => {
+              const interval = new Interval(intervalData.description, intervalData.duration, intervalData.intensity, intervalData.repetitions);
+              if (intervalData.done) interval.markAsDone();
+              newActivity.addInterval(interval);
+            });
+          }
           plan.addActivity(newActivity);
         }
       });
@@ -87,8 +102,8 @@ export class TrainingPlan {
     return plan;
   }
 
-  getEntriesByDate(): { [date: string]: { description: string; discipline: string; done: boolean; plannedDuration: number }[] } {
-    const entries: { [date: string]: { description: string; discipline: string; done: boolean; plannedDuration: number }[] } = {};
+  getEntriesByDate(): { [date: string]: { description: string; discipline: string; done: boolean; plannedDuration: number; intervals: any[], distance?: number }[] } {
+    const entries: { [date: string]: any[] } = {};
     for (const activity of this.activities) {
       const dateKey = activity.date.toISOString().split("T")[0]; // Format date as 'YYYY-MM-DD'
       if (!entries[dateKey]) {
@@ -96,10 +111,17 @@ export class TrainingPlan {
       }
       // Push a detailed object instead of just the description string
       entries[dateKey].push({
-        description: activity.description,
+        ...activity, // Spread operator to include all properties
         discipline: activity.discipline,
         done: activity.isDone(),
         plannedDuration: activity.plannedDuration,
+        intervals: activity.intervals.map(i => ({
+          description: i.description,
+          duration: i.duration,
+          intensity: i.intensity,
+          repetitions: i.repetitions,
+          done: i.isDone(),
+        })),
       });
     }
     return entries;
