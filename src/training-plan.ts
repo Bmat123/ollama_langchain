@@ -18,12 +18,12 @@ export class TrainingPlan {
   /**
    * Saves the current training plan to a JSON file.
    */
-  save(filename: string): void {
-    const dir = 'data';
+  save(username: string, planName: string): void {
+    const dir = path.join('data', 'users', username, 'plans');
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir);
+      fs.mkdirSync(dir, { recursive: true });
     }
-    const dataFilePath = path.join(dir, `${filename}.json`);
+    const dataFilePath = path.join(dir, `${planName}.json`);
     // Serialize activities to a plain JSON object, including distance for relevant types
     const activitiesToSave = this.activities.map(activity => {
       const plainActivity: any = {
@@ -53,9 +53,9 @@ export class TrainingPlan {
    * Loads the training plan from a JSON file.
    * @returns The loaded training plan, or an empty TrainingPlan if the file does not exist or if there is an error.
    */
-  static load(filename: string): TrainingPlan {
+  static load(username: string, planName: string): TrainingPlan {
     const plan = new TrainingPlan();
-    const dataFilePath = path.join('data', `${filename}.json`);
+    const dataFilePath = path.join('data', 'users', username, 'plans', `${planName}.json`);
     try {
       if (!fs.existsSync(dataFilePath)) {
         return plan; // Return an empty plan if the file doesn't exist

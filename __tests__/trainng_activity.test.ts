@@ -1,4 +1,5 @@
 import { TrainingActivity, Running, Cycling, Swimming } from '../src/training-activity';
+import { Interval } from '../src/interval';
 
 // Since TrainingActivity is abstract, we create a simple concrete class for testing its base functionality.
 class TestActivity extends TrainingActivity {
@@ -35,6 +36,18 @@ describe('TrainingActivity Classes', () => {
       expect(activity.isDone()).toBe(true); // Check it is done first
       activity.markAsUndone();
       expect(activity.isDone()).toBe(false); // Should be not done
+    });
+
+    it('should add an interval and update the planned duration', () => {
+      const initialDuration = 10;
+      const activity = new TestActivity(new Date(), 'Interval Test', 'Test', initialDuration);
+      const interval = new Interval('Warm up', 15, 'low', 1);
+
+      activity.addInterval(interval);
+
+      expect(activity.intervals).toHaveLength(1);
+      expect(activity.intervals[0]).toBe(interval);
+      expect(activity.plannedDuration).toBe(initialDuration + interval.duration); // 10 + 15 = 25
     });
   });
 

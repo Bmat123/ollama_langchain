@@ -1,8 +1,20 @@
 body {
   font-family: sans-serif;
-  padding: 20px;
   background-color: #f0f0f0;
   color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 20px;
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 #calendar-header {
@@ -13,7 +25,7 @@ body {
 }
 
 #calendar-header h1 {
-  margin: 0;
+  margin: 0 auto;
   font-size: 1.8em;
 }
 
@@ -24,9 +36,13 @@ body {
   cursor: pointer;
 }
 
-h1 { /* This is now for the month display */
+h1 {
   text-align: center;
   color: #444;
+}
+
+.profile-link, .back-link {
+  text-decoration: none;
 }
 
 .plan-controls {
@@ -77,6 +93,13 @@ h1 { /* This is now for the month display */
   border-radius: 4px;
   position: relative;
   font-size: 0.9em;
+}
+.day-cell:not(.padding) {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.day-cell:not(.padding):hover {
+  background-color: #e9f5ff;
 }
 
 .day-cell.padding {
@@ -182,4 +205,45 @@ h1 { /* This is now for the month display */
   padding: 8px;
   border-radius: 4px;
   margin-bottom: 5px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group input {
+  margin-right: 10px;
+}
+
+/* Profile Form Styles */
+#profile-form {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
 }

@@ -7,12 +7,15 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts",
-    "test": "jest"
+    "test": "jest",
+    "agent": "ts-node src/agent.ts"
   },
   "homepage": "https://github.com/Bmat123/ollama_langchain#readme",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "@google/genai": "^0.14.0",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
