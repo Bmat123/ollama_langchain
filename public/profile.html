@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">‹ Back to Calendar</a>
+    <h1>User Profile</h1>
+    <form id="profile-form">
+      <div id="status-message"></div>
+      <h3>Basic Information</h3>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" required>
+      </div>
+      <div class="form-group">
+        <label for="age">Age</label>
+        <input type="number" id="age">
+      </div>
+      <div class="form-group">
+        <label for="height">Height (cm)</label>
+        <input type="number" id="height">
+      </div>
+      <div class="form-group">
+        <label for="weight">Weight (kg)</label>
+        <input type="number" id="weight">
+      </div>
+
+      <h3>Performance Metrics (Optional)</h3>
+      <div class="form-group"><label for="run1hResult">1-Hour Run Distance (km)</label><input type="number" step="0.1" id="run1hResult"></div>
+      <div class="form-group"><label for="cyclingFtp">Cycling FTP (watts)</label><input type="number" id="cyclingFtp"></div>
+      <div class="form-group"><label for="swim100mTime">100m Swim Time (seconds)</label><input type="number" id="swim100mTime"></div>
+
+      <button type="submit">Save Profile</button>
+    </form>
+  </div>
+  <script src="profile.js"></script>
+</body>
+</html>

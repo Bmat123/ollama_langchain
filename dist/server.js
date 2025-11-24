@@ -7,6 +7,8 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const path_1 = __importDefault(require("path")); // Import the 'path' module
 const data_generator_1 = require("./data-generator");
+const training_activity_1 = require("./training-activity");
+const user_1 = require("./user");
 const training_plan_1 = require("./training-plan");
 const app = (0, express_1.default)();
 app.use(express_1.default.json()); // Enable JSON body parsing
@@ -17,13 +19,37 @@ app.get("/data", (req, res) => {
     const data = (0, data_generator_1.generateJsonData)();
     res.json(data);
 });
-app.post("/save/:filename", (req, res) => {
+app.post("/user/:username/plan/:planname", (req, res) => {
     try {
-        const filename = req.params.filename;
-        // For this example, we save the currently generated default plan
-        // In a real app, you'd get the plan data from `req.body`
-        const planToSave = training_plan_1.TrainingPlan.load('default'); // Or create from req.body
-        planToSave.save(filename);
+        const { username, planname } = req.params;
+        const entriesByDate = req.body.entriesByDate;
+        if (!entriesByDate) {
+            return res.status(400).json({ error: "Missing entriesByDate in request body." });
+        }
+        const planToSave = new training_plan_1.TrainingPlan();
+        // Reconstruct the TrainingPlan object from the frontend data
+        Object.values(entriesByDate).forEach((dayActivities) => {
+            // Type guard to ensure we are working with an array
+            if (Array.isArray(dayActivities)) {
+                dayActivities.forEach(activityData => {
+                    let newActivity;
+                    // This is a simplified reconstruction. A real app might need more robust logic.
+                    if (activityData.discipline === 'Running') {
+                        newActivity = new training_activity_1.Running(new Date(activityData.date), activityData.description, activityData.plannedDuration, activityData.distance);
+                    }
+                    else if (activityData.discipline === 'Cycling') {
+                        newActivity = new training_activity_1.Cycling(new Date(activityData.date), activityData.description, activityData.plannedDuration, activityData.distance);
+                    }
+                    else {
+                        newActivity = new training_activity_1.Swimming(new Date(activityData.date), activityData.description, activityData.plannedDuration, activityData.distance);
+                    }
+                    if (activityData.done)
+                        newActivity.markAsDone();
+                    planToSave.addActivity(newActivity);
+                });
+            }
+        });
+        planToSave.save(username, planname);
         res.send("Training plan saved successfully!");
     }
     catch (error) {
@@ -31,16 +57,35 @@ app.post("/save/:filename", (req, res) => {
         res.status(500).json({ error: "Failed to save training plan." });
     }
 });
-app.get("/load/:filename", (req, res) => {
-    // Use the static load method on the class
-    const filename = req.params.filename;
-    const loadedPlan = training_plan_1.TrainingPlan.load(filename);
-    if (loadedPlan) {
-        res.json({ message: "Training plan loaded successfully!", entriesByDate: loadedPlan.getEntriesByDate() });
+app.post("/user/:username", (req, res) => {
+    try {
+        const username = req.params.username;
+        const data = req.body;
+        const user = new user_1.User(username, data.age, data.height, data.weight, data.run1hResult, data.cyclingFtp, data.swim100mTime);
+        user.save();
+        res.json({ message: `User profile for ${username} saved successfully!` });
+    }
+    catch (error) {
+        console.error("Error saving user profile:", error);
+        res.status(500).json({ error: "Failed to save user profile." });
+    }
+});
+app.get("/user/:username", (req, res) => {
+    const username = req.params.username;
+    const user = user_1.User.load(username);
+    if (user) {
+        res.json(user);
     }
     else {
-        res.status(500).json({ error: "Could not load training plan." });
+        res.status(404).json({ error: `User '${username}' not found.` });
     }
+});
+app.get("/user/:username/plan/:planname", (req, res) => {
+    // Use the static load method on the class
+    const { username, planname } = req.params;
+    const loadedPlan = training_plan_1.TrainingPlan.load(username, planname);
+    // The load method returns an empty plan if not found, which is fine.
+    res.json({ message: "Training plan loaded successfully!", entriesByDate: loadedPlan.getEntriesByDate() });
 });
 app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
