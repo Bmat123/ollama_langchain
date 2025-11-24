@@ -34,7 +34,7 @@ export abstract class TrainingActivity {
     date: Date,
     description: string,
     discipline: string,
-    plannedDuration: number
+    plannedDuration: number 
   ) {
     this.date = date;
     this.description = description;
