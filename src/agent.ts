@@ -4,6 +4,10 @@ import {
     // Removed CitationMetadata and CitationSource imports to fix TS2305
 } from '@google/genai';
 import * as dotenv from 'dotenv'; 
+import { TrainingPlan } from './training-plan';
+import { Running, Cycling, Swimming, TrainingActivity } from './training-activity';
+import { Interval } from './interval';
+import { COACH_SYSTEM_INSTRUCTION, EXAMPLE_USER_PROMPT } from './prompts';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -18,9 +22,6 @@ const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
 if (!API_KEY) {
     throw new Error("API Key Error: GEMINI_API_KEY is not set. Please create a .env file based on .env.example.");
 }
-
-// System Instruction: Define the Agent's persona and rules
-const COACH_SYSTEM_INSTRUCTION = "You are a USAT Level 2 certified triathlon coach with 15 years of experience. Your primary goal is to create safe, effective, and highly personalized training plans following principles of periodization. All advice must be grounded in current sports science. Always use metric units unless the user explicitly requests imperial.";
 
 // --- EXPONENTIAL BACKOFF UTILITY ---
 
@@ -57,7 +58,7 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
     // The core request payload contains only required, strictly-typed properties
     const request: GenerateContentParameters = {
         model: MODEL_NAME,
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: COACH_SYSTEM_INSTRUCTION }] }],
     };
 
     // Use an 'augmentedRequest' cast as 'any' to include properties 
@@ -66,8 +67,12 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
         ...request,
         // FIX TS2353: Move systemInstruction here
         systemInstruction: { parts: [{ text: COACH_SYSTEM_INSTRUCTION }] },
+        // CRUCIAL: Enforce JSON output mode
+        generationConfig: {
+            responseMimeType: "application/json",
+        },
         // CRUCIAL: Enable Google Search Grounding
-        tools: [{ googleSearch: {} }],
+        //tools: [{ googleSearch: {} }],
     } as any;
 
 
@@ -87,8 +92,7 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
             // Use groundingMetadata, which is common for Google Search results
             const groundingMetadata = candidate?.groundingMetadata;
 
-            // FIX TS2339: Use 'groundingAttributions' property, cast as 'any' to bypass 
-            // the type conflict in your environment.
+   
             if (groundingMetadata && (groundingMetadata as any).groundingAttributions) {
                 sources = (groundingMetadata as any).groundingAttributions
                     .map((attribution: any) => ({ // Using 'any' since CitationSource import failed
@@ -120,15 +124,65 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
 
 async function main() {
     console.log("--- Starting Triathlon Coach Agent ---");
-    const userPrompt = "I am training for the Ironman World Championship in Kona. I have a long history of calf injuries. What should my specific run volume and intensity look like in the first four weeks, focusing on calf preservation? Also, what are the current typical race day water temperatures in Kona?";
 
     try {
-        const result = await generateTriathlonPlan(userPrompt);
+        const result = await generateTriathlonPlan(EXAMPLE_USER_PROMPT);
 
-        console.log("\n--- Generated Training Recommendation ---");
-        console.log(result.text);
+        console.log("\n--- Raw Model Output ---");
+        console.log(result.text); // Log the raw text for debugging
 
-        if (result.sources.length > 0) {
+        try {
+            const planJson = JSON.parse(result.text);
+            console.log("\n--- Successfully Parsed Training Plan JSON ---");
+
+            if (planJson.trainingPlan) {
+                const agentPlan = new TrainingPlan();
+
+                // Iterate through the dates in the generated plan
+                Object.keys(planJson.trainingPlan).forEach(dateStr => {
+                    const dayActivities = planJson.trainingPlan[dateStr];
+                    if (Array.isArray(dayActivities)) {
+                        dayActivities.forEach(activityData => {
+                            let newActivity: TrainingActivity | null = null;
+                            const activityDate = new Date(dateStr);
+
+                            // Re-create the correct class instance based on the discipline
+                            switch (activityData.discipline) {
+                                case "Running":
+                                    newActivity = new Running(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                                    break;
+                                case "Cycling":
+                                    newActivity = new Cycling(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                                    break;
+                                case "Swimming":
+                                    newActivity = new Swimming(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                                    break;
+                            }
+
+                            if (newActivity) {
+                                // Add intervals if they exist in the generated data
+                                if (activityData.intervals && Array.isArray(activityData.intervals)) {
+                                    activityData.intervals.forEach((intervalData: any) => {
+                                        const interval = new Interval(intervalData.description, intervalData.duration, intervalData.intensity, intervalData.repetitions);
+                                        newActivity.addInterval(interval);
+                                    });
+                                }
+                                agentPlan.addActivity(newActivity);
+                            }
+                        });
+                    }
+                });
+
+                // Save the populated plan to a file
+                agentPlan.save("agent", "generated-plan");
+                console.log("\n--- Agent-generated plan saved as 'generated-plan' for user 'agent' ---");
+            }
+        } catch (jsonError) {
+            console.error("\n--- FAILED TO PARSE JSON ---");
+            console.error("The model did not return a valid JSON object despite being in JSON mode.");
+        }
+
+        if (result.sources && result.sources.length > 0) {
             console.log("\n--- Grounding Sources (Real-time information used) ---");
             result.sources.forEach((s, index) => {
                 console.log(`[${index + 1}] ${s.title}: ${s.uri}`);
