@@ -3,7 +3,7 @@
  */
 
 import * as path from 'path';
-import * as fs from 'fs';
+import * as fs from 'fs';import { Rest } from './training-activity';
 import { Interval } from './interval';
 import { TrainingActivity, Running, Cycling, Swimming } from './training-activity';
 
@@ -78,6 +78,9 @@ export class TrainingPlan {
             break;
           case "Swimming":
             newActivity = new Swimming(activityDate, activity.description, activity.plannedDuration, activity.distance);
+            break;
+          case "Rest":
+            newActivity = new Rest(activityDate, activity.description);
             break;
         }
 
