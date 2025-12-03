@@ -14,7 +14,11 @@ const app = (0, express_1.default)();
 app.use(express_1.default.json()); // Enable JSON body parsing
 const port = 3000;
 app.use((0, cors_1.default)()); // Enable CORS for local development
-app.use(express_1.default.static(path_1.default.join(__dirname, "../public")));
+app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
+app.get('/', (req, res) => {
+    // Serve the login page as the root
+    res.sendFile(path_1.default.join(__dirname, '../public/login.html'));
+});
 app.get("/data", (req, res) => {
     const data = (0, data_generator_1.generateJsonData)();
     res.json(data);

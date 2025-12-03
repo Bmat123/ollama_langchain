@@ -79,3 +79,15 @@ export class Swimming extends TrainingActivity {
     super(date, description, "Swimming", plannedDuration);
   }
 }
+
+/**
+ * Represents a rest day.
+ */
+export class Rest extends TrainingActivity {
+  constructor(
+    public date: Date,
+    public description: string = "Rest Day"
+  ) {
+    super(date, description, "Rest", 0);
+  }
+}

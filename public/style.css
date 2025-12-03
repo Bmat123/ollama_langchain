@@ -4,6 +4,14 @@ body {
   color: #333;
 }
 
+.centered-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+}
+
 .container {
   max-width: 1200px;
   margin: 20px auto;
@@ -142,6 +150,9 @@ h1 {
 }
 .activity.discipline-swimming {
   background-color: #17a2b8; /* Teal */
+}
+.activity.discipline-rest {
+  background-color: #6c757d; /* Gray */
 }
 
 .planned-duration {

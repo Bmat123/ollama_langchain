@@ -1,5 +1,6 @@
 let nav = 0; // Navigation offset for months
 let activities = {}; // To store fetched activities
+let currentUsername = ''; // To store the logged-in user's name
 let clickedDate = null; // To store the date string of the clicked activity
 const calendar = document.getElementById('calendar-grid');
 const monthDisplay = document.getElementById('month-display');
@@ -166,12 +167,25 @@ function initButtons() {
   const saveBtn = document.getElementById('save-plan-btn');
   const loadBtn = document.getElementById('load-plan-btn');
   const filenameInput = document.getElementById('plan-filename');
-  const usernameInput = document.getElementById('username');
   const statusMessage = document.getElementById('status-message');
   const nextButton = document.getElementById('next-month-btn');
   const backButton = document.getElementById('prev-month-btn');
   const editModal = document.getElementById('activity-modal');
   const addModal = document.getElementById('add-activity-modal');
+
+  // Get username from URL and load their default plan
+  const params = new URLSearchParams(window.location.search);
+  currentUsername = params.get('user');
+
+  if (currentUsername) {
+    document.getElementById('plan-controls').style.display = 'flex';
+    // Load a default plan or the last saved plan
+    fetchDataAndRender(`/user/${currentUsername}/plan/default-plan`);
+  } else {
+    // If no user, redirect to login
+    window.location.href = '/login.html';
+  }
+
   document.querySelectorAll('.close-button').forEach(button => {
     button.addEventListener('click', () => {
       editModal.style.display = 'none';
@@ -181,14 +195,13 @@ function initButtons() {
   const modalForm = document.getElementById('modal-form');
 
   saveBtn.addEventListener('click', async () => {
-    const username = usernameInput.value.trim();
     const planName = filenameInput.value.trim();
-    if (!username || !planName) {
-      alert('Please enter both a username and a plan name.');
+    if (!planName) {
+      alert('Please enter a plan name.');
       return;
     }
     try {
-      const response = await fetch(`/user/${username}/plan/${planName}`, {
+      const response = await fetch(`/user/${currentUsername}/plan/${planName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entriesByDate: activities }),
@@ -196,7 +209,7 @@ function initButtons() {
       if (!response.ok) {
         throw new Error('Failed to save plan.');
       }
-      statusMessage.textContent = `Plan '${planName}' for user '${username}' saved successfully!`;
+      statusMessage.textContent = `Plan '${planName}' saved successfully!`;
       statusMessage.style.color = 'green';
     } catch (error) {
       console.error('Error saving plan:', error);
@@ -206,13 +219,12 @@ function initButtons() {
   });
 
   loadBtn.addEventListener('click', async () => {
-    const username = usernameInput.value.trim();
     const planName = filenameInput.value.trim();
-    if (!username || !planName) {
-      alert('Please enter both a username and a plan name to load.');
+    if (!planName) {
+      alert('Please enter a plan name to load.');
       return;
     }
-    await fetchDataAndRender(`/user/${username}/plan/${planName}`);
+    await fetchDataAndRender(`/user/${currentUsername}/plan/${planName}`);
   });
 
   nextButton.addEventListener('click', () => {
@@ -269,4 +281,3 @@ function initButtons() {
 }
 
 initButtons();
-fetchDataAndRender('/data'); // Fetch initial data and render the calendar

@@ -4,10 +4,10 @@ import {
     // Removed CitationMetadata and CitationSource imports to fix TS2305
 } from '@google/genai';
 import * as dotenv from 'dotenv'; 
-import { TrainingPlan } from './training-plan';
+import { TrainingPlan } from './training-plan';import { Rest } from './training-activity';
 import { Running, Cycling, Swimming, TrainingActivity } from './training-activity';
 import { Interval } from './interval';
-import { COACH_SYSTEM_INSTRUCTION, EXAMPLE_USER_PROMPT } from './prompts';
+import { COACH_SYSTEM_INSTRUCTION, EXAMPLE_USER_PROMPT, SHORT_PROMPT } from './prompts';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -58,7 +58,7 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
     // The core request payload contains only required, strictly-typed properties
     const request: GenerateContentParameters = {
         model: MODEL_NAME,
-        contents: [{ role: "user", parts: [{ text: COACH_SYSTEM_INSTRUCTION }] }],
+        contents: [{ role: "user", parts: [{ text: SHORT_PROMPT }] }],
     };
 
     // Use an 'augmentedRequest' cast as 'any' to include properties 
@@ -66,7 +66,7 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
     const augmentedRequest = {
         ...request,
         // FIX TS2353: Move systemInstruction here
-        systemInstruction: { parts: [{ text: COACH_SYSTEM_INSTRUCTION }] },
+        systemInstruction: { parts: [{ text: SHORT_PROMPT }] },
         // CRUCIAL: Enforce JSON output mode
         generationConfig: {
             responseMimeType: "application/json",
@@ -126,7 +126,7 @@ async function main() {
     console.log("--- Starting Triathlon Coach Agent ---");
 
     try {
-        const result = await generateTriathlonPlan(EXAMPLE_USER_PROMPT);
+        const result = await generateTriathlonPlan(SHORT_PROMPT);
 
         console.log("\n--- Raw Model Output ---");
         console.log(result.text); // Log the raw text for debugging
@@ -156,6 +156,9 @@ async function main() {
                                     break;
                                 case "Swimming":
                                     newActivity = new Swimming(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                                    break;
+                                case "Rest":
+                                    newActivity = new Rest(activityDate, activityData.description);
                                     break;
                             }
 

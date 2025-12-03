@@ -13,7 +13,12 @@ const port = 3000;
 
 app.use(cors()); // Enable CORS for local development
 
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.join(__dirname, '../public')));
+
+app.get('/', (req, res) => {
+  // Serve the login page as the root
+  res.sendFile(path.join(__dirname, '../public/login.html'));
+});
 
 app.get("/data", (req: Request, res: Response) => {
   const data = generateJsonData();
