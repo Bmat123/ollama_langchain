@@ -1,10 +1,13 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import path from "path"; // Import the 'path' module
-import { generateJsonData } from "./data-generator";import { Interval } from "./interval";
-import { Running, Cycling, Swimming } from "./training-activity";
+import { runAgentForUser } from "./agent";
+import { generateJsonData } from "./data-generator";
+import { Interval } from "./interval";
+import { Running, Cycling, Swimming, Rest } from "./training-activity";
 import { User } from "./user";
 import { TrainingPlan } from "./training-plan";
+import * as fs from "fs";
 
 const app = express();
 app.use(express.json()); // Enable JSON body parsing
@@ -40,13 +43,15 @@ app.post("/user/:username/plan/:planname", (req: Request, res: Response) => {
     Object.values(entriesByDate).forEach((dayActivities) => {
       // Type guard to ensure we are working with an array
       if (Array.isArray(dayActivities)) {
-        dayActivities.forEach(activityData => {
-          let newActivity;
+        dayActivities.forEach((activityData: any) => {
+          let newActivity: Running | Cycling | Swimming | Rest | null = null;
           // This is a simplified reconstruction. A real app might need more robust logic.
           if (activityData.discipline === 'Running') {
             newActivity = new Running(new Date(activityData.date), activityData.description, activityData.plannedDuration, activityData.distance);
           } else if (activityData.discipline === 'Cycling') {
             newActivity = new Cycling(new Date(activityData.date), activityData.description, activityData.plannedDuration, activityData.distance);
+          } else if (activityData.discipline === 'Rest') {
+            newActivity = new Rest(new Date(activityData.date), activityData.description);
           } else {
             newActivity = new Swimming(new Date(activityData.date), activityData.description, activityData.plannedDuration, activityData.distance);
           }
@@ -61,6 +66,25 @@ app.post("/user/:username/plan/:planname", (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error saving training plan:", error);
     res.status(500).json({ error: "Failed to save training plan." });
+  }
+});
+
+app.post("/user/:username/plans/generate", async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { planName, userPrompt } = req.body;
+
+    if (!planName || !userPrompt) {
+      return res.status(400).json({ error: "planName and userPrompt are required." });
+    }
+
+    // Trigger the agent logic but don't wait for it to finish
+    runAgentForUser(username, planName, userPrompt);
+
+    res.status(202).json({ message: `New plan '${planName}' is being generated. It will be available shortly.` });
+  } catch (error) {
+    console.error("Error triggering agent:", error);
+    res.status(500).json({ error: "Failed to start plan generation." });
   }
 });
 
@@ -89,6 +113,28 @@ app.get("/user/:username", (req: Request, res: Response) => {
     res.status(404).json({ error: `User '${username}' not found.` });
   }
 });
+
+app.get("/user/:username/plans", (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+    const plansDir = path.join(__dirname, '../data/users', username, 'plans');
+
+    if (!fs.existsSync(plansDir)) {
+      // If the directory doesn't exist, the user has no saved plans.
+      return res.json({ plans: [] });
+    }
+
+    const planFiles = fs.readdirSync(plansDir);
+    const planNames = planFiles
+      .filter(file => file.endsWith('.json'))
+      .map(file => file.replace('.json', ''));
+    res.json({ plans: planNames });
+  } catch (error) {
+    console.error(`Error listing plans for user ${req.params.username}:`, error);
+    res.status(500).json({ error: "Failed to list training plans." });
+  }
+});
+
 app.get("/user/:username/plan/:planname", (req: Request, res: Response) => {
   // Use the static load method on the class
   const { username, planname } = req.params;

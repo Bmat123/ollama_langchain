@@ -1,16 +1,29 @@
-let nav = 0; // Navigation offset for months
-let activities = {}; // To store fetched activities
-let currentUsername = ''; // To store the logged-in user's name
-let clickedDate = null; // To store the date string of the clicked activity
-const calendar = document.getElementById('calendar-grid');
-const monthDisplay = document.getElementById('month-display');
-const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// --- STATE MANAGEMENT ---
+const state = {
+  nav: 0, // Month navigation offset
+  activities: {}, // Plan data: { 'YYYY-MM-DD': [activity, ...] }
+  currentUsername: '',
+  clickedDate: null, // For editing activities
+};
 
-function loadCalendar() {
+// --- DOM ELEMENT CONSTANTS ---
+const DOM = {
+  calendarGrid: document.getElementById('calendar-grid'),
+  monthDisplay: document.getElementById('month-display'),
+  weekdaysContainer: document.getElementById('weekdays'),
+  statusMessage: document.getElementById('status-message'),
+  planControls: document.getElementById('plan-controls'),
+  planFilenameInput: document.getElementById('plan-filename'),
+  editModal: document.getElementById('activity-modal'),
+  addModal: document.getElementById('add-activity-modal'),
+  modalForm: document.getElementById('modal-form'),
+  addActivityForm: document.getElementById('add-activity-form'),
+};
+
+function renderCalendar() {
   const dt = new Date();
-
-  if (nav !== 0) {
-    dt.setMonth(new Date().getMonth() + nav);
+  if (state.nav !== 0) {
+    dt.setMonth(new Date().getMonth() + state.nav);
   }
 
   const day = dt.getDate();
@@ -19,128 +32,106 @@ function loadCalendar() {
 
   const firstDayOfMonth = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  
   const dateString = firstDayOfMonth.toLocaleDateString('en-us', {
     weekday: 'long',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
   });
-  const paddingDays = weekdays.indexOf(dateString.split(', ')[0]);
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const paddingDays = weekdays.indexOf(dateString);
 
-  monthDisplay.innerText = `${dt.toLocaleDateString('en-us', { month: 'long' })} ${year}`;
-  calendar.innerHTML = '';
+  DOM.monthDisplay.innerText = `${dt.toLocaleDateString('en-us', { month: 'long' })} ${year}`;
+  DOM.calendarGrid.innerHTML = '';
 
   // Render weekdays
-  const weekdaysContainer = document.getElementById('weekdays');
-  weekdaysContainer.innerHTML = '';
-  weekdays.forEach(day => {
-    const dayDiv = document.createElement('div');
-    dayDiv.innerText = day.substring(0, 3);
-    weekdaysContainer.appendChild(dayDiv);
-  });
+  DOM.weekdaysContainer.innerHTML = weekdays.map(day => `<div>${day.substring(0, 3)}</div>`).join('');
 
   for(let i = 1; i <= paddingDays + daysInMonth; i++) {
     const daySquare = document.createElement('div');
     daySquare.classList.add('day-cell');
+    const dayOfMonth = i - paddingDays;
+    const dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`;
 
     if (i > paddingDays) {
-      const dayOfMonth = i - paddingDays;
-      daySquare.innerText = dayOfMonth;
+      const dayNumber = document.createElement('div');
+      dayNumber.classList.add('day-number');
+      dayNumber.innerText = dayOfMonth;
+      daySquare.appendChild(dayNumber);
 
-      const dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`;
-      
-      if (activities[dayString]) {
-        // Sort activities for consistent order
-        activities[dayString].sort((a, b) => a.description.localeCompare(b.description));
+      const activitiesForDay = state.activities[dayString] || [];
+      activitiesForDay.sort((a, b) => a.description.localeCompare(b.description));
 
-        activities[dayString].forEach(activity => {
-          const activityDiv = document.createElement('div');
-          activityDiv.classList.add('activity');
-          activityDiv.classList.add(`discipline-${activity.discipline.toLowerCase()}`);
-          activityDiv.innerText = activity.description;
-          activityDiv.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent day cell click from firing
-            openActivityModal(activity);
-          });
-
-          daySquare.appendChild(activityDiv);
+      for (const activity of activitiesForDay) {
+        const activityDiv = document.createElement('div');
+        activityDiv.className = `activity discipline-${activity.discipline.toLowerCase()}`;
+        // Combine discipline and description for a more descriptive UI
+        if (activity.discipline === 'Rest') {
+          activityDiv.innerText = 'Rest Day';
+        } else {
+          activityDiv.innerText = `${activity.discipline} - ${activity.description}`;
+        }
+        activityDiv.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openActivityModal(activity);
         });
+        daySquare.appendChild(activityDiv);
       }
 
-      if (dayOfMonth === day && nav === 0) {
+      if (dayOfMonth === day && state.nav === 0) {
         daySquare.classList.add('today');
       }
     } else {
       daySquare.classList.add('padding');
     }
 
-    daySquare.addEventListener('click', () => {
-      if (i > paddingDays) {
-        openAddActivityModal(`${year}-${String(month + 1).padStart(2, '0')}-${String(i - paddingDays).padStart(2, '0')}`);
-      }
-    });
-    calendar.appendChild(daySquare);    
+    daySquare.addEventListener('click', () => openAddActivityModal(dayString));
+    DOM.calendarGrid.appendChild(daySquare);
   }
 }
 
 function openActivityModal(activity) {
-  clickedDate = activity.date.split('T')[0]; // Store the date of the activity being edited
-  const modal = document.getElementById('activity-modal');
+  state.clickedDate = activity.date.split('T')[0];
   document.getElementById('modal-title').innerText = `Edit: ${activity.description}`;
   document.getElementById('modal-description').value = activity.description;
   document.getElementById('modal-status').checked = activity.done;
   document.getElementById('modal-discipline').innerText = activity.discipline;
   document.getElementById('modal-duration').innerText = `${activity.plannedDuration} minutes`;
 
-  const distanceEl = document.getElementById('modal-distance');
   const distanceGroup = document.getElementById('modal-distance-group');
   if (activity.distance !== undefined) {
     distanceGroup.style.display = 'block';
-    distanceEl.innerText = `${activity.distance} km`;
+    document.getElementById('modal-distance').innerText = `${activity.distance} km`;
   } else {
-    // Hide distance if it's not applicable (e.g., for Yoga)
     distanceGroup.style.display = 'none';
   }
 
   const intervalsContainer = document.getElementById('modal-intervals-container');
-  intervalsContainer.innerHTML = ''; // Clear previous intervals
+  intervalsContainer.innerHTML = '';
 
   if (activity.intervals && activity.intervals.length > 0) {
-    const intervalsTitle = document.createElement('h3');
-    intervalsTitle.innerText = 'Intervals';
-    intervalsContainer.appendChild(intervalsTitle);
-
-    const intervalsList = document.createElement('ul');
-    intervalsList.className = 'intervals-list';
-
-    activity.intervals.forEach(interval => {
-      const listItem = document.createElement('li');
+    const intervalItems = activity.intervals.map(interval => {
       const status = interval.done ? '✅' : '🔲';
-      listItem.innerHTML = `
-        ${status} ${interval.repetitions}x ${interval.description} 
-        (${interval.duration} min) @ ${interval.intensity} intensity
-      `;
-      intervalsList.appendChild(listItem);
-    });
+      return `<li>${status} ${interval.repetitions}x ${interval.description} (${interval.duration} min) @ ${interval.intensity} intensity</li>`;
+    }).join('');
 
-    intervalsContainer.appendChild(intervalsList);
+    intervalsContainer.innerHTML = `<h3>Intervals</h3><ul class="intervals-list">${intervalItems}</ul>`;
   }
 
-
-  modal.style.display = 'flex';
+  showModal(DOM.editModal);
 }
 
 function openAddActivityModal(date) {
-  const modal = document.getElementById('add-activity-modal');
+  if (!date || date.includes('undefined')) return;
   document.getElementById('add-activity-date').value = date;
-  document.getElementById('add-activity-form').reset();
-  modal.style.display = 'flex';
+  DOM.addActivityForm.reset();
+  showModal(DOM.addModal);
 }
 
+function showModal(modal) { modal.style.display = 'flex'; }
+function hideModals() {
+  DOM.editModal.style.display = 'none';
+  DOM.addModal.style.display = 'none';
+}
 
-async function fetchDataAndRender(url) {
-  const statusMessage = document.getElementById('status-message');
+async function loadPlanData(url) {
   try {
     const response = await fetch(url);
     if (!response.ok) {
@@ -148,102 +139,97 @@ async function fetchDataAndRender(url) {
     }
     const data = await response.json();
     if (data.entriesByDate) {
-      activities = data.entriesByDate;
-      statusMessage.textContent = data.message || 'Plan loaded.';
-      statusMessage.style.color = 'green';
+      state.activities = data.entriesByDate;
+      updateStatus(data.message || 'Plan loaded.', 'green');
     } else {
       throw new Error('Loaded data is not in the correct format.');
     }
   } catch (error) {
     console.error('Error fetching data:', error);
-    activities = {}; // Clear activities on error
-    statusMessage.textContent = 'Error loading plan.';
-    statusMessage.style.color = 'red';
+    state.activities = {};
+    updateStatus('Error loading plan.', 'red');
   }
-  loadCalendar(); // Render calendar with new data
+  renderCalendar();
+}
+
+function updateStatus(message, color) {
+  DOM.statusMessage.textContent = message;
+  DOM.statusMessage.style.color = color;
 }
 
 function initButtons() {
   const saveBtn = document.getElementById('save-plan-btn');
   const loadBtn = document.getElementById('load-plan-btn');
-  const filenameInput = document.getElementById('plan-filename');
-  const statusMessage = document.getElementById('status-message');
   const nextButton = document.getElementById('next-month-btn');
   const backButton = document.getElementById('prev-month-btn');
-  const editModal = document.getElementById('activity-modal');
-  const addModal = document.getElementById('add-activity-modal');
 
   // Get username from URL and load their default plan
   const params = new URLSearchParams(window.location.search);
-  currentUsername = params.get('user');
+  state.currentUsername = params.get('user');
+  const currentPlan = params.get('plan');
 
-  if (currentUsername) {
-    document.getElementById('plan-controls').style.display = 'flex';
-    // Load a default plan or the last saved plan
-    fetchDataAndRender(`/user/${currentUsername}/plan/default-plan`);
+  if (state.currentUsername && currentPlan) {
+    DOM.planControls.style.display = 'flex';
+    // Pre-fill the plan name and load it
+    DOM.planFilenameInput.value = currentPlan;
+    loadPlanData(`/user/${state.currentUsername}/plan/${currentPlan}`);
   } else {
     // If no user, redirect to login
     window.location.href = '/login.html';
   }
 
   document.querySelectorAll('.close-button').forEach(button => {
-    button.addEventListener('click', () => {
-      editModal.style.display = 'none';
-      addModal.style.display = 'none';
-    });
+    button.addEventListener('click', hideModals);
   });
-  const modalForm = document.getElementById('modal-form');
 
   saveBtn.addEventListener('click', async () => {
-    const planName = filenameInput.value.trim();
+    const planName = DOM.planFilenameInput.value.trim();
     if (!planName) {
       alert('Please enter a plan name.');
       return;
     }
     try {
-      const response = await fetch(`/user/${currentUsername}/plan/${planName}`, {
+      const response = await fetch(`/user/${state.currentUsername}/plan/${planName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entriesByDate: activities }),
+        body: JSON.stringify({ entriesByDate: state.activities }),
       });
       if (!response.ok) {
         throw new Error('Failed to save plan.');
       }
-      statusMessage.textContent = `Plan '${planName}' saved successfully!`;
-      statusMessage.style.color = 'green';
+      updateStatus(`Plan '${planName}' saved successfully!`, 'green');
     } catch (error) {
       console.error('Error saving plan:', error);
-      statusMessage.textContent = `Error saving plan.`;
-      statusMessage.style.color = 'red';
+      updateStatus('Error saving plan.', 'red');
     }
   });
 
   loadBtn.addEventListener('click', async () => {
-    const planName = filenameInput.value.trim();
+    const planName = DOM.planFilenameInput.value.trim();
     if (!planName) {
       alert('Please enter a plan name to load.');
       return;
     }
-    await fetchDataAndRender(`/user/${currentUsername}/plan/${planName}`);
+    await loadPlanData(`/user/${state.currentUsername}/plan/${planName}`);
   });
 
   nextButton.addEventListener('click', () => {
-    nav++;
-    loadCalendar();
+    state.nav++;
+    renderCalendar();
   });
 
   backButton.addEventListener('click', () => {
-    nav--;
-    loadCalendar();
+    state.nav--;
+    renderCalendar();
   });
 
-  modalForm.addEventListener('submit', (e) => {
+  DOM.modalForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const description = document.getElementById('modal-description').value;
     const isDone = document.getElementById('modal-status').checked;
 
     // Find and update the activity in our local `activities` object
-    const activityToUpdate = activities[clickedDate].find(
+    const activityToUpdate = state.activities[state.clickedDate].find(
       act => act.description === document.getElementById('modal-title').innerText.replace('Edit: ', '')
     );
 
@@ -252,12 +238,11 @@ function initButtons() {
       activityToUpdate.done = isDone;
     }
 
-    editModal.style.display = 'none';
-    loadCalendar(); // Re-render the calendar to show the changes
+    hideModals();
+    renderCalendar();
   });
 
-  const addActivityForm = document.getElementById('add-activity-form');
-  addActivityForm.addEventListener('submit', (e) => {
+  DOM.addActivityForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const date = document.getElementById('add-activity-date').value;
     const newActivity = {
@@ -270,13 +255,13 @@ function initButtons() {
       intervals: [], // New activities start with no intervals
     };
 
-    if (!activities[date]) {
-      activities[date] = [];
+    if (!state.activities[date]) {
+      state.activities[date] = [];
     }
-    activities[date].push(newActivity);
+    state.activities[date].push(newActivity);
 
-    addModal.style.display = 'none';
-    loadCalendar(); // Re-render to show the new activity
+    hideModals();
+    renderCalendar();
   });
 }
 

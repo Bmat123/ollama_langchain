@@ -3,6 +3,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const usernameInput = document.getElementById('username');
   const statusMessage = document.getElementById('status-message');
 
+  // Pre-fill username from URL if it exists
+  const params = new URLSearchParams(window.location.search);
+  const usernameFromUrl = params.get('user');
+  if (usernameFromUrl) {
+    usernameInput.value = usernameFromUrl;
+    usernameInput.readOnly = true; // Make it non-editable for clarity
+    // Attempt to load any existing data for this user
+    loadUserData(usernameFromUrl);
+  }
+
   // Function to load user data
   const loadUserData = async (username) => {
     if (!username) return;
@@ -30,9 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // When the username changes, try to load the data
-  usernameInput.addEventListener('blur', () => {
-    loadUserData(usernameInput.value.trim());
-  });
+  if (!usernameFromUrl) { // Only add this listener if the username isn't fixed
+    usernameInput.addEventListener('blur', () => {
+      loadUserData(usernameInput.value.trim());
+    });
+  }
 
   // Handle form submission
   form.addEventListener('submit', async (e) => {
