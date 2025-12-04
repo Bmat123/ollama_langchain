@@ -7,7 +7,7 @@
 </head>
 <body>
   <div class="container">
-    <a href="/" class="back-link">‹ Back to Calendar</a>
+    <a href="/login.html" id="back-link" class="back-link">‹ Back</a>
     <h1>User Profile</h1>
     <form id="profile-form">
       <div id="status-message"></div>
@@ -37,6 +37,14 @@
       <button type="submit">Save Profile</button>
     </form>
   </div>
-  <script src="profile.js"></script>
+  <script>
+    // Small script to make the back link smarter
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get('user');
+    if (username) {
+      document.getElementById('back-link').href = `/dashboard.html?user=${username}`;
+    }
+  </script>
+  <script src="profile.js"></script> 
 </body>
 </html>

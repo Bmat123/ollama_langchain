@@ -4,9 +4,11 @@ import {
     // Removed CitationMetadata and CitationSource imports to fix TS2305
 } from '@google/genai';
 import * as dotenv from 'dotenv'; 
-import { TrainingPlan } from './training-plan';import { Rest } from './training-activity';
+import { TrainingPlan } from './training-plan';
+import { Rest } from './training-activity';
 import { Running, Cycling, Swimming, TrainingActivity } from './training-activity';
 import { Interval } from './interval';
+import { User } from './user';
 import { COACH_SYSTEM_INSTRUCTION, EXAMPLE_USER_PROMPT, SHORT_PROMPT } from './prompts';
 
 // Load environment variables from .env file
@@ -23,34 +25,9 @@ if (!API_KEY) {
     throw new Error("API Key Error: GEMINI_API_KEY is not set. Please create a .env file based on .env.example.");
 }
 
-// --- EXPONENTIAL BACKOFF UTILITY ---
-
-/**
- * Sleeps for a calculated duration with exponential backoff and jitter.
- * @param attempt The current retry attempt (0-indexed).
- * @param baseDelayMs The starting delay in milliseconds (e.g., 500ms).
- */
-function sleepWithBackoff(attempt: number, baseDelayMs: number): Promise<void> {
-    const maxRetries = 5;
-    if (attempt >= maxRetries) {
-        throw new Error("Max retries exceeded.");
-    }
-    // Calculate exponential delay: baseDelay * 2^attempt
-    const exponentialDelay = baseDelayMs * Math.pow(2, attempt);
-    // Add jitter (randomness) to prevent synchronized retries
-    const jitter = Math.random() * exponentialDelay;
-    const delay = Math.min(exponentialDelay + jitter, 10000); // Cap delay at 10 seconds
-
-    return new Promise(resolve => setTimeout(resolve, delay));
-}
-
 // --- CORE AGENT FUNCTION ---
 
-/**
- * Calls the Gemini API with resilience (backoff) and grounding (Google Search).
- * @param prompt The user's specific request (e.g., "Create a 12-week plan for an Olympic distance race").
- * @returns The generated text response and any associated citation sources.
- */
+
 async function generateTriathlonPlan(prompt: string): Promise<{ text: string, sources: { uri: string, title: string }[] }> {
     // Initialize the AI client using the key from the environment
     const ai = new GoogleGenAI({ apiKey: API_KEY });
@@ -58,7 +35,7 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
     // The core request payload contains only required, strictly-typed properties
     const request: GenerateContentParameters = {
         model: MODEL_NAME,
-        contents: [{ role: "user", parts: [{ text: SHORT_PROMPT }] }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
     };
 
     // Use an 'augmentedRequest' cast as 'any' to include properties 
@@ -66,7 +43,7 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
     const augmentedRequest = {
         ...request,
         // FIX TS2353: Move systemInstruction here
-        systemInstruction: { parts: [{ text: SHORT_PROMPT }] },
+        systemInstruction: { parts: [{ text: COACH_SYSTEM_INSTRUCTION }] },
         // CRUCIAL: Enforce JSON output mode
         generationConfig: {
             responseMimeType: "application/json",
@@ -75,49 +52,112 @@ async function generateTriathlonPlan(prompt: string): Promise<{ text: string, so
         //tools: [{ googleSearch: {} }],
     } as any;
 
+    try {
+        // Use the augmented request with all necessary properties
+        const response = await ai.models.generateContent(augmentedRequest);
 
-    const maxAttempts = 5;
-    const baseDelay = 500; // Start with 0.5s delay
+        const candidate = response.candidates?.[0];
+        const text = candidate?.content?.parts?.[0]?.text || "Failed to generate content.";
+        
+        let sources: { uri: string, title: string }[] = [];
+        
+        // Use groundingMetadata, which is common for Google Search results
+        const groundingMetadata = candidate?.groundingMetadata;
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        try {
-            // Use the augmented request with all necessary properties
-            const response = await ai.models.generateContent(augmentedRequest);
-
-            const candidate = response.candidates?.[0];
-            const text = candidate?.content?.parts?.[0]?.text || "Failed to generate content.";
-            
-            let sources: { uri: string, title: string }[] = [];
-            
-            // Use groundingMetadata, which is common for Google Search results
-            const groundingMetadata = candidate?.groundingMetadata;
-
-   
-            if (groundingMetadata && (groundingMetadata as any).groundingAttributions) {
-                sources = (groundingMetadata as any).groundingAttributions
-                    .map((attribution: any) => ({ // Using 'any' since CitationSource import failed
-                        uri: attribution.web?.uri || '',
-                        title: attribution.web?.title || 'External Source',
-                    }))
-                    .filter((source: { uri: string, title: string }) => source.uri.length > 0 && source.title.length > 0);
-            }
-            
-            return { text, sources };
-
-        } catch (error) {
-            // Check if this is a retriable error (e.g., rate limit, server error)
-            if (attempt < maxAttempts - 1) {
-                await sleepWithBackoff(attempt, baseDelay);
-                // Continue to the next loop iteration (retry)
-            } else {
-                // Max retries reached, throw final error
-                console.error("Agent failed after multiple retries.", error);
-                throw new Error("The triathlon coach service is currently unavailable. Please try again later.");
-            }
+        if (groundingMetadata && (groundingMetadata as any).groundingAttributions) {
+            sources = (groundingMetadata as any).groundingAttributions
+                .map((attribution: any) => ({ // Using 'any' since CitationSource import failed
+                    uri: attribution.web?.uri || '',
+                    title: attribution.web?.title || 'External Source',
+                }))
+                .filter((source: { uri: string, title: string }) => source.uri.length > 0 && source.title.length > 0);
         }
+        
+        return { text, sources };
+    } catch (error) {
+        console.error("Agent failed to generate content.", error);
+        throw new Error("The triathlon coach service is currently unavailable. Please try again later.");
     }
-    // Should be unreachable but satisfies TS completion check
-    throw new Error("Exited retry loop unexpectedly.");
+}
+
+// reads user profile and makes it into a propmopt// 
+function userInfoToPrompt(username: string, userPrompt: string): string {
+    const user = User.load(username);
+    if (!user) {
+        console.log(`--- No profile found for user: ${username}. Using base prompt. ---`);
+        return userPrompt;
+    }
+
+    console.log(`--- Found profile for user: ${username} ---`);
+    const userProfileText = `
+    Here is the athlete's profile:
+    - Age: ${user.age || 'N/A'}
+    - Height: ${user.height || 'N/A'} cm
+    - Weight: ${user.weight || 'N/A'} kg
+    - 1-Hour Run Distance: ${user.run1hResult || 'N/A'} km
+    - Cycling FTP: ${user.cyclingFtp || 'N/A'} watts
+    - 100m Swim Time: ${user.swim100mTime || 'N/A'} seconds
+    `;
+    return `${userPrompt}\n\n${userProfileText}`;
+}
+
+/**
+ * Generates a plan for a specific user and saves it.
+ * @param username The user for whom the plan is generated.
+ * @param planName The name to save the plan under.
+ * @param userPrompt The user's specific request for the plan.
+ */
+export async function runAgentForUser(username: string, planName: string, userPrompt: string) {
+    console.log(`--- Running Agent for user: ${username}, plan: ${planName} ---`);
+    const personalizedPrompt = userInfoToPrompt(username, userPrompt);
+    const result = await generateTriathlonPlan(personalizedPrompt);
+
+    console.log("\n--- Raw Model Output ---");
+    console.log(result.text); // Log the raw text for debugging
+
+    if (result.sources && result.sources.length > 0) {
+        console.log("\n--- Grounding Sources (Real-time information used) ---");
+        result.sources.forEach((s, index) => {
+            console.log(`[${index + 1}] ${s.title}: ${s.uri}`);
+        });
+    }
+
+    const planJson = JSON.parse(result.text);
+    if (planJson.trainingPlan) {
+        const agentPlan = new TrainingPlan();
+
+        // Iterate through the dates in the generated plan
+        Object.keys(planJson.trainingPlan).forEach(dateStr => {
+            const dayActivities = planJson.trainingPlan[dateStr];
+            if (Array.isArray(dayActivities)) {
+                dayActivities.forEach(activityData => {
+                    let newActivity: TrainingActivity | null = null;
+                    const activityDate = new Date(dateStr);
+
+                    switch (activityData.discipline) {
+                        case "Running":
+                            newActivity = new Running(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                            break;
+                        case "Cycling":
+                            newActivity = new Cycling(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                            break;
+                        case "Swimming":
+                            newActivity = new Swimming(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                            break;
+                        case "Rest":
+                            newActivity = new Rest(activityDate, activityData.description);
+                            break;
+                    }
+
+                    if (newActivity) {
+                        agentPlan.addActivity(newActivity);
+                    }
+                });
+            }
+        });
+        agentPlan.save(username, planName);
+        console.log(`\n--- Agent-generated plan saved as '${planName}' for user '${username}' ---`);
+    }
 }
 
 // --- USAGE EXAMPLE ---
@@ -126,71 +166,8 @@ async function main() {
     console.log("--- Starting Triathlon Coach Agent ---");
 
     try {
-        const result = await generateTriathlonPlan(SHORT_PROMPT);
-
-        console.log("\n--- Raw Model Output ---");
-        console.log(result.text); // Log the raw text for debugging
-
-        try {
-            const planJson = JSON.parse(result.text);
-            console.log("\n--- Successfully Parsed Training Plan JSON ---");
-
-            if (planJson.trainingPlan) {
-                const agentPlan = new TrainingPlan();
-
-                // Iterate through the dates in the generated plan
-                Object.keys(planJson.trainingPlan).forEach(dateStr => {
-                    const dayActivities = planJson.trainingPlan[dateStr];
-                    if (Array.isArray(dayActivities)) {
-                        dayActivities.forEach(activityData => {
-                            let newActivity: TrainingActivity | null = null;
-                            const activityDate = new Date(dateStr);
-
-                            // Re-create the correct class instance based on the discipline
-                            switch (activityData.discipline) {
-                                case "Running":
-                                    newActivity = new Running(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
-                                    break;
-                                case "Cycling":
-                                    newActivity = new Cycling(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
-                                    break;
-                                case "Swimming":
-                                    newActivity = new Swimming(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
-                                    break;
-                                case "Rest":
-                                    newActivity = new Rest(activityDate, activityData.description);
-                                    break;
-                            }
-
-                            if (newActivity) {
-                                // Add intervals if they exist in the generated data
-                                if (activityData.intervals && Array.isArray(activityData.intervals)) {
-                                    activityData.intervals.forEach((intervalData: any) => {
-                                        const interval = new Interval(intervalData.description, intervalData.duration, intervalData.intensity, intervalData.repetitions);
-                                        newActivity.addInterval(interval);
-                                    });
-                                }
-                                agentPlan.addActivity(newActivity);
-                            }
-                        });
-                    }
-                });
-
-                // Save the populated plan to a file
-                agentPlan.save("agent", "generated-plan");
-                console.log("\n--- Agent-generated plan saved as 'generated-plan' for user 'agent' ---");
-            }
-        } catch (jsonError) {
-            console.error("\n--- FAILED TO PARSE JSON ---");
-            console.error("The model did not return a valid JSON object despite being in JSON mode.");
-        }
-
-        if (result.sources && result.sources.length > 0) {
-            console.log("\n--- Grounding Sources (Real-time information used) ---");
-            result.sources.forEach((s, index) => {
-                console.log(`[${index + 1}] ${s.title}: ${s.uri}`);
-            });
-        }
+        // For direct execution, we'll use a default user and plan name
+        await runAgentForUser("Bart", "test", SHORT_PROMPT);
         
     } catch (e) {
         if (e instanceof Error) {

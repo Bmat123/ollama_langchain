@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="main-header">
+      <h1 id="dashboard-title"></h1>
+      <a href="/profile.html" class="profile-link">Edit My Profile</a>
+    </div>
+    <h2>My Saved Plans</h2>
+    <div id="plan-list-container">
+      <p>Loading plans...</p>
+    </div>
+    <hr />
+    <h2>Create New Plan with AI</h2>
+    <div class="plan-controls">
+      <input type="text" id="new-plan-name" placeholder="New plan name..." />
+      <input type="text" id="new-plan-prompt" placeholder="Describe your goal (e.g., '12 week marathon plan')..." style="flex-grow: 2;" />
+      <button id="create-plan-btn">Generate</button>
+    </div>
+    <div id="generation-status"></div>
+  </div>
+  <script src="dashboard.js"></script>
+</body>
+</html>
