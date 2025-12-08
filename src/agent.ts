@@ -1,14 +1,15 @@
-import { 
-    GoogleGenAI, 
+import {
+    GoogleGenAI,
     GenerateContentParameters,
     // Removed CitationMetadata and CitationSource imports to fix TS2305
 } from '@google/genai';
-import * as dotenv from 'dotenv'; 
+import * as dotenv from 'dotenv';
 import { TrainingPlan } from './training-plan';
 import { Rest } from './training-activity';
 import { Running, Cycling, Swimming, TrainingActivity } from './training-activity';
 import { Interval } from './interval';
 import { User } from './user';
+import { getRandomSwimmingWorkout } from './workout-utils'; // Import our new utility
 import { COACH_SYSTEM_INSTRUCTION, EXAMPLE_USER_PROMPT, SHORT_PROMPT } from './prompts';
 
 // Load environment variables from .env file
@@ -142,7 +143,18 @@ export async function runAgentForUser(username: string, planName: string, userPr
                             newActivity = new Cycling(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
                             break;
                         case "Swimming":
-                            newActivity = new Swimming(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                            // --- MODIFICATION START ---
+                            // Instead of using the AI's workout, get a random one from our JSON file.
+                            const randomSwimmingActivity = getRandomSwimmingWorkout();
+                            if (randomSwimmingActivity) {
+                                console.log(`--- Replacing AI swimming workout with: "${randomSwimmingActivity.description}" ---`);
+                                // The activity is already created, just update its date to match the plan's date.
+                                randomSwimmingActivity.date = activityDate;
+                                newActivity = randomSwimmingActivity;
+                            } else {
+                                // Fallback to AI-generated workout if the file fails to load.
+                                newActivity = new Swimming(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                            }
                             break;
                         case "Rest":
                             newActivity = new Rest(activityDate, activityData.description);
