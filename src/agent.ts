@@ -9,7 +9,7 @@ import { Rest } from './training-activity';
 import { Running, Cycling, Swimming, TrainingActivity } from './training-activity';
 import { Interval } from './interval';
 import { User } from './user';
-import { getRandomSwimmingWorkout } from './workout-utils'; // Import our new utility
+import { getRandomSwimmingWorkout, getRandomRunningWorkout } from './workout-utils'; // Import our new utility and the running one
 import { COACH_SYSTEM_INSTRUCTION, EXAMPLE_USER_PROMPT, SHORT_PROMPT } from './prompts';
 
 // Load environment variables from .env file
@@ -137,7 +137,16 @@ export async function runAgentForUser(username: string, planName: string, userPr
 
                     switch (activityData.discipline) {
                         case "Running":
-                            newActivity = new Running(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                            const randomRunningActivity = getRandomRunningWorkout();
+                            if (randomRunningActivity) {
+                                console.log(`--- Replacing AI running workout with: "${randomRunningActivity.description}" ---`);
+                                // Update the date of the random workout to match the plan's date.
+                                randomRunningActivity.date = activityDate;
+                                newActivity = randomRunningActivity;
+                            } else {
+                                // Fallback to the AI-generated workout if the file fails to load or is empty.
+                                newActivity = new Running(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                            }
                             break;
                         case "Cycling":
                             newActivity = new Cycling(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
