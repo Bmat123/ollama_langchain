@@ -1,43 +1,69 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Interval } from './interval';
-import { Swimming } from './training-activity';
+import { Swimming, Running, Cycling, TrainingActivity } from './training-activity';
 
 /**
  * Loads swimming workouts from the JSON file and returns a randomly selected one.
  * @returns A randomly selected Swimming object, fully instantiated, or null if an error occurs.
  */
 export function getRandomSwimmingWorkout(): Swimming | null {
+    const jsonFilePath = path.join(__dirname, '..', 'data', 'swimming_workouts', 'swimming_workouts.json');
+    return getRandomWorkout(jsonFilePath, 'Swimming') as Swimming | null;
+}
+
+/**
+ * Loads running workouts from the JSON file and returns a randomly selected one.
+ * @returns A randomly selected Running object, fully instantiated, or null if an error occurs.
+ */
+export function getRandomRunningWorkout(): Running | null {
+    const jsonFilePath = path.join(__dirname, '..', 'data', 'running_workouts', 'running_workouts.json');
+    return getRandomWorkout(jsonFilePath, 'Running') as Running | null;
+}
+
+/**
+ * A generic function to load a workout from a JSON file for a given discipline.
+ * @param jsonFilePath The absolute path to the JSON file containing the workouts.
+ * @param discipline The name of the discipline to determine which class to instantiate.
+ * @returns A randomly selected and instantiated TrainingActivity object, or null on error.
+ */
+function getRandomWorkout(jsonFilePath: string, discipline: 'Running' | 'Swimming' | 'Cycling'): TrainingActivity | null {
     try {
-        const jsonFilePath = path.join(__dirname, '..', 'data', 'swimming_workouts', 'swimming_workouts.json');
         const fileContents = fs.readFileSync(jsonFilePath, 'utf8');
-        // Parse the raw data from JSON. This will be an array of plain objects.
         const workoutsData: any[] = JSON.parse(fileContents);
 
         if (!workoutsData || workoutsData.length === 0) {
-            console.warn("Warning: The swimming workouts JSON file is empty.");
+            console.warn(`Warning: The workout file at ${jsonFilePath} is empty.`);
             return null;
         }
 
-        // Select a random workout object from the data
         const randomWorkoutData = workoutsData[Math.floor(Math.random() * workoutsData.length)];
 
-        // Create a new Swimming class instance from the raw data.
-        // Note: The date from the JSON is ignored in favor of the date from the AI's plan.
-        // We pass a placeholder date here which will be replaced in agent.ts.
-        const swimmingActivity = new Swimming(
-            new Date(), // Placeholder date
-            randomWorkoutData.description,
-            randomWorkoutData.plannedDuration,
-            randomWorkoutData.distance
-        );
+        // Create a new activity instance using the provided constructor.
+        // The date is a placeholder and will be replaced in agent.ts with the planned date.
+        let activity: TrainingActivity;
+        const placeholderDate = new Date();
 
-        // Instantiate and assign the intervals from the JSON to the new Swimming object.
-        swimmingActivity.intervals = randomWorkoutData.intervals.map((i: any) => new Interval(i.description, i.duration, i.intensity, i.repetitions));
+        switch (discipline) {
+            case 'Running':
+                activity = new Running(placeholderDate, randomWorkoutData.description, randomWorkoutData.plannedDuration, randomWorkoutData.distance);
+                break;
+            case 'Swimming':
+                activity = new Swimming(placeholderDate, randomWorkoutData.description, randomWorkoutData.plannedDuration, randomWorkoutData.distance);
+                break;
+            case 'Cycling':
+                activity = new Cycling(placeholderDate, randomWorkoutData.description, randomWorkoutData.plannedDuration, randomWorkoutData.distance);
+                break;
+        }
 
-        return swimmingActivity;
+        // Instantiate and assign intervals if they exist in the data.
+        if (randomWorkoutData.intervals && Array.isArray(randomWorkoutData.intervals)) {
+            activity.intervals = randomWorkoutData.intervals.map((i: any) => new Interval(i.description, i.duration, i.intensity, i.repetitions));
+        }
+
+        return activity;
     } catch (error) {
-        console.error("Failed to read or parse swimming workouts JSON.", error);
+        console.error(`Failed to read or parse workout file at ${jsonFilePath}.`, error);
         return null;
     }
 }
