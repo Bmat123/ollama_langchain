@@ -4,12 +4,12 @@ import {
     // Removed CitationMetadata and CitationSource imports to fix TS2305
 } from '@google/genai';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
 import { TrainingPlan } from './training-plan';
 import { Rest } from './training-activity';
 import { Running, Cycling, Swimming, TrainingActivity } from './training-activity';
-import { Interval } from './interval';
 import { User } from './user';
-import { getRandomSwimmingWorkout, getRandomRunningWorkout } from './workout-utils'; // Import our new utility and the running one
+import { getRandomWorkout } from './workout-utils';
 import { COACH_SYSTEM_INSTRUCTION, EXAMPLE_USER_PROMPT, SHORT_PROMPT } from './prompts';
 
 // Load environment variables from .env file
@@ -103,6 +103,58 @@ function userInfoToPrompt(username: string, userPrompt: string): string {
 }
 
 /**
+ * Parses the JSON output from the AI model and constructs a TrainingPlan object.
+ * This function replaces AI-generated workouts with pre-defined ones from JSON files where applicable.
+ * @param jsonString The raw JSON string from the AI model.
+ * @returns A populated TrainingPlan object, or null if parsing fails.
+ */
+function createPlanFromJson(jsonString: string): TrainingPlan | null {
+    try {
+        const planJson = JSON.parse(jsonString);
+        if (!planJson.trainingPlan) {
+            console.error("--- Failed to find 'trainingPlan' in the model's output. ---");
+            return null;
+        }
+
+        const agentPlan = new TrainingPlan();
+
+        Object.keys(planJson.trainingPlan).forEach(dateStr => {
+            const dayActivities = planJson.trainingPlan[dateStr];
+            if (Array.isArray(dayActivities)) {
+                dayActivities.forEach((activityData: any) => {
+                    let newActivity: TrainingActivity | null = null;
+                    const activityDate = new Date(dateStr);
+                    const discipline: 'Running' | 'Swimming' | 'Cycling' | 'Rest' = activityData.discipline;
+
+                    if (discipline === 'Rest') {
+                        newActivity = new Rest(activityDate, activityData.description);
+                    } else if (discipline === 'Running' || discipline === 'Swimming' || discipline === 'Cycling') {
+                        const jsonFilePath = path.join(__dirname, '..', 'data', `${discipline.toLowerCase()}_workouts`, `${discipline.toLowerCase()}_workouts.json`);
+                        const randomActivity = getRandomWorkout(jsonFilePath, discipline);
+
+                        if (randomActivity) {
+                            console.log(`--- Replacing AI ${discipline} workout with: "${randomActivity.description}" ---`);
+                            randomActivity.date = activityDate;
+                            newActivity = randomActivity;
+                        } else {
+                            console.warn(`--- Could not load random workout for ${discipline}. Using AI-generated version. ---`);
+                            const activityClass = { Running, Swimming, Cycling }[discipline];
+                            newActivity = new activityClass(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
+                        }
+                    }
+
+                    if (newActivity) agentPlan.addActivity(newActivity);
+                });
+            }
+        });
+        return agentPlan;
+    } catch (error) {
+        console.error("--- Failed to parse JSON from model output. ---", error);
+        return null;
+    }
+}
+
+/**
  * Generates a plan for a specific user and saves it.
  * @param username The user for whom the plan is generated.
  * @param planName The name to save the plan under.
@@ -123,61 +175,13 @@ export async function runAgentForUser(username: string, planName: string, userPr
         });
     }
 
-    const planJson = JSON.parse(result.text);
-    if (planJson.trainingPlan) {
-        const agentPlan = new TrainingPlan();
+    const agentPlan = createPlanFromJson(result.text);
 
-        // Iterate through the dates in the generated plan
-        Object.keys(planJson.trainingPlan).forEach(dateStr => {
-            const dayActivities = planJson.trainingPlan[dateStr];
-            if (Array.isArray(dayActivities)) {
-                dayActivities.forEach(activityData => {
-                    let newActivity: TrainingActivity | null = null;
-                    const activityDate = new Date(dateStr);
-
-                    switch (activityData.discipline) {
-                        case "Running":
-                            const randomRunningActivity = getRandomRunningWorkout();
-                            if (randomRunningActivity) {
-                                console.log(`--- Replacing AI running workout with: "${randomRunningActivity.description}" ---`);
-                                // Update the date of the random workout to match the plan's date.
-                                randomRunningActivity.date = activityDate;
-                                newActivity = randomRunningActivity;
-                            } else {
-                                // Fallback to the AI-generated workout if the file fails to load or is empty.
-                                newActivity = new Running(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
-                            }
-                            break;
-                        case "Cycling":
-                            newActivity = new Cycling(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
-                            break;
-                        case "Swimming":
-                            // --- MODIFICATION START ---
-                            // Instead of using the AI's workout, get a random one from our JSON file.
-                            const randomSwimmingActivity = getRandomSwimmingWorkout();
-                            if (randomSwimmingActivity) {
-                                console.log(`--- Replacing AI swimming workout with: "${randomSwimmingActivity.description}" ---`);
-                                // The activity is already created, just update its date to match the plan's date.
-                                randomSwimmingActivity.date = activityDate;
-                                newActivity = randomSwimmingActivity;
-                            } else {
-                                // Fallback to AI-generated workout if the file fails to load.
-                                newActivity = new Swimming(activityDate, activityData.description, activityData.plannedDuration, activityData.distance);
-                            }
-                            break;
-                        case "Rest":
-                            newActivity = new Rest(activityDate, activityData.description);
-                            break;
-                    }
-
-                    if (newActivity) {
-                        agentPlan.addActivity(newActivity);
-                    }
-                });
-            }
-        });
+    if (agentPlan) {
         agentPlan.save(username, planName);
         console.log(`\n--- Agent-generated plan saved as '${planName}' for user '${username}' ---`);
+    } else {
+        console.error(`\n--- Could not create or save the plan for user '${username}'. ---`);
     }
 }
 
