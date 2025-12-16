@@ -4,30 +4,12 @@ import { Interval } from './interval';
 import { Swimming, Running, Cycling, TrainingActivity } from './training-activity';
 
 /**
- * Loads swimming workouts from the JSON file and returns a randomly selected one.
- * @returns A randomly selected Swimming object, fully instantiated, or null if an error occurs.
- */
-export function getRandomSwimmingWorkout(): Swimming | null {
-    const jsonFilePath = path.join(__dirname, '..', 'data', 'swimming_workouts', 'swimming_workouts.json');
-    return getRandomWorkout(jsonFilePath, 'Swimming') as Swimming | null;
-}
-
-/**
- * Loads running workouts from the JSON file and returns a randomly selected one.
- * @returns A randomly selected Running object, fully instantiated, or null if an error occurs.
- */
-export function getRandomRunningWorkout(): Running | null {
-    const jsonFilePath = path.join(__dirname, '..', 'data', 'running_workouts', 'running_workouts.json');
-    return getRandomWorkout(jsonFilePath, 'Running') as Running | null;
-}
-
-/**
  * A generic function to load a workout from a JSON file for a given discipline.
  * @param jsonFilePath The absolute path to the JSON file containing the workouts.
  * @param discipline The name of the discipline to determine which class to instantiate.
  * @returns A randomly selected and instantiated TrainingActivity object, or null on error.
  */
-function getRandomWorkout(jsonFilePath: string, discipline: 'Running' | 'Swimming' | 'Cycling'): TrainingActivity | null {
+export function getRandomWorkout(jsonFilePath: string, discipline: 'Running' | 'Swimming' | 'Cycling'): TrainingActivity | null {
     try {
         const fileContents = fs.readFileSync(jsonFilePath, 'utf8');
         const workoutsData: any[] = JSON.parse(fileContents);
